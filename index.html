@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Size Reducer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0f0f11;
+  --surface:#18181c;
+  --surface2:#222228;
+  --surface3:#2a2a32;
+  --border:rgba(255,255,255,0.07);
+  --border2:rgba(255,255,255,0.13);
+  --text:#f0f0f0;
+  --text2:#9898a8;
+  --text3:#55555f;
+  --accent:#7c6ef7;
+  --accent2:#a48cf9;
+  --green:#22c97a;
+  --green-bg:rgba(34,201,122,0.12);
+  --amber:#f0a030;
+  --amber-bg:rgba(240,160,48,0.12);
+  --red:#f05070;
+  --radius:10px;
+  --radius-lg:16px;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:2rem 1rem;overflow-x:hidden;}
+
+/* animated bg */
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 20% -10%,rgba(124,110,247,0.12) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 80% 110%,rgba(34,201,122,0.08) 0%,transparent 60%);pointer-events:none;z-index:0;}
+
+header{max-width:800px;margin:0 auto 2rem;position:relative;z-index:1;}
+.header-inner{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+header h1{font-size:24px;font-weight:600;letter-spacing:-0.5px;background:linear-gradient(135deg,#fff 40%,var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+header p{font-size:13px;color:var(--text2);margin-top:5px;}
+.container{max-width:800px;margin:0 auto;position:relative;z-index:1;}
+
+/* drop zone */
+.drop-zone{border:1.5px dashed var(--border2);border-radius:var(--radius-lg);padding:3.5rem 1.5rem;text-align:center;cursor:pointer;background:var(--surface);transition:all 0.2s;position:relative;overflow:hidden;}
+.drop-zone::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(124,110,247,0.05),transparent);opacity:0;transition:opacity 0.2s;}
+.drop-zone:hover::after,.drop-zone.drag-over::after{opacity:1;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);transform:translateY(-1px);}
+.drop-zone.drag-over{border-style:solid;}
+.drop-icon{width:56px;height:56px;margin:0 auto 14px;background:var(--surface2);border-radius:14px;display:flex;align-items:center;justify-content:center;border:0.5px solid var(--border2);transition:transform 0.2s;}
+.drop-zone:hover .drop-icon{transform:scale(1.05);}
+.drop-icon svg{width:26px;height:26px;stroke:var(--accent2);}
+.drop-zone h2{font-size:16px;font-weight:500;}
+.drop-zone p{font-size:13px;color:var(--text2);margin-top:6px;}
+
+/* tabs */
+.tabs{display:flex;gap:4px;background:var(--surface2);border-radius:10px;padding:4px;margin:1.25rem 0 0;}
+.tab-btn{flex:1;padding:8px;font-size:12px;font-weight:500;border:none;border-radius:7px;cursor:pointer;background:transparent;color:var(--text2);transition:all 0.18s;}
+.tab-btn.active{background:var(--surface3);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.3);}
+.tab-panel{display:none;animation:fadeIn 0.2s ease;}
+.tab-panel.active{display:block;}
+
+/* controls */
+.controls-bar{display:flex;flex-wrap:wrap;gap:14px;padding:14px 16px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);margin:1rem 0;align-items:center;}
+.ctrl-group{display:flex;align-items:center;gap:10px;flex:1;min-width:150px;}
+.ctrl-group label{font-size:11px;color:var(--text2);white-space:nowrap;min-width:62px;text-transform:uppercase;letter-spacing:0.5px;}
+.ctrl-group input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:var(--surface3);border-radius:2px;cursor:pointer;outline:none;}
+.ctrl-group input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--accent);border-radius:50%;cursor:pointer;transition:transform 0.15s;}
+.ctrl-group input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+.ctrl-group span{font-size:12px;font-weight:600;min-width:44px;text-align:right;color:var(--text);}
+select{font-size:12px;padding:5px 8px;border-radius:6px;border:0.5px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;outline:none;}
+
+/* colour grading section */
+.grade-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 16px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);margin-bottom:1rem;}
+.grade-preset-row{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+.preset-btn{padding:5px 12px;font-size:11px;font-weight:500;border-radius:99px;border:0.5px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all 0.15s;}
+.preset-btn:hover,.preset-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.reset-grade{padding:5px 12px;font-size:11px;font-weight:500;border-radius:99px;border:0.5px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;margin-left:auto;transition:all 0.15s;}
+.reset-grade:hover{color:var(--text2);border-color:var(--border2);}
+
+/* summary */
+.summary-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem;}
+.sum-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 14px;transition:transform 0.2s;}
+.sum-card:hover{transform:translateY(-1px);}
+.sum-label{font-size:10px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;}
+.sum-val{font-size:17px;font-weight:600;}
+.sum-val.green{color:var(--green);}
+
+/* grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-bottom:1.25rem;}
+.thumb-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:8px;position:relative;animation:cardIn 0.3s ease both;transition:transform 0.18s,box-shadow 0.18s;}
+.thumb-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.4);}
+@keyframes cardIn{from{opacity:0;transform:scale(0.92) translateY(6px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.thumb-card img{width:100%;height:96px;object-fit:cover;border-radius:6px;background:var(--surface2);display:block;transition:filter 0.3s;}
+.thumb-name{font-size:10px;color:var(--text2);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.thumb-meta{display:flex;align-items:center;gap:6px;margin-top:3px;}
+.thumb-size{font-size:10px;font-weight:600;color:var(--text);}
+.thumb-saving{font-size:10px;color:var(--green);font-weight:500;}
+.thumb-saving.bigger{color:var(--amber);}
+.status-badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;margin-top:4px;font-weight:500;}
+.processing{background:var(--amber-bg);color:var(--amber);animation:pulse 1.2s ease infinite;}
+.done-badge{background:var(--green-bg);color:var(--green);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+
+/* progress bar on processing card */
+.progress-bar{height:2px;background:var(--surface3);border-radius:1px;margin-top:5px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:1px;width:0%;animation:progressAnim 2s ease infinite;}
+@keyframes progressAnim{0%{width:0%;margin-left:0;}60%{width:70%;}100%{width:100%;margin-left:100%;}}
+
+.remove-btn{position:absolute;top:5px;right:5px;background:rgba(0,0,0,0.5);border:0.5px solid rgba(255,255,255,0.15);border-radius:50%;width:20px;height:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:11px;line-height:1;transition:all 0.15s;opacity:0;}
+.thumb-card:hover .remove-btn{opacity:1;}
+.remove-btn:hover{background:var(--red);color:#fff;border-color:var(--red);}
+
+/* preview overlay on hover */
+.thumb-overlay{position:absolute;inset:8px;height:96px;border-radius:6px;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.18s;pointer-events:none;font-size:10px;color:#fff;font-weight:500;gap:4px;}
+.thumb-card:hover .thumb-overlay{opacity:1;}
+
+/* action buttons */
+.action-row{display:flex;gap:8px;}
+.action-row button{flex:1;padding:10px;font-size:13px;font-weight:500;border-radius:var(--radius);cursor:pointer;border:0.5px solid var(--border2);background:var(--surface);color:var(--text);transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.action-row button:hover{background:var(--surface2);transform:translateY(-1px);}
+.action-row button:active{transform:translateY(0);}
+.action-row button.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.action-row button.primary:hover{background:var(--accent2);border-color:var(--accent2);}
+
+#file-input{display:none;}
+
+/* animations */
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+.fade-in{animation:fadeIn 0.25s ease both;}
+
+/* toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:0.5px solid var(--border2);border-radius:var(--radius);padding:10px 16px;font-size:13px;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,0.4);animation:toastIn 0.25s ease both;z-index:999;}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+@media(max-width:520px){.summary-bar{grid-template-columns:1fr 1fr;}.action-row{flex-direction:column;}.grade-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div>
+      <h1>Image Size Reducer</h1>
+      <p>Compress &amp; grade up to 150 images — everything runs in your browser.</p>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <div class="drop-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+    </div>
+    <h2>Drop up to 150 images here</h2>
+    <p>or click to select &nbsp;·&nbsp; JPG, PNG, WebP supported</p>
+  </div>
+  <input type="file" id="file-input" accept="image/*" multiple>
+
+  <div id="main" style="display:none;">
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('compress',this)">Compression</button>
+      <button class="tab-btn" onclick="switchTab('grade',this)">Colour Grading</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-compress">
+      <div class="controls-bar">
+        <div class="ctrl-group">
+          <label>Target KB</label>
+          <input type="range" id="targetkb" min="10" max="2000" step="10" value="150">
+          <span id="kb-val">150 KB</span>
+        </div>
+        <div class="ctrl-group">
+          <label>Max width</label>
+          <input type="range" id="maxw" min="100" max="4000" step="10" value="1920">
+          <span id="w-val">1920px</span>
+        </div>
+        <div class="ctrl-group" style="flex:0 0 auto;">
+          <label>Format</label>
+          <select id="fmt">
+            <option value="image/jpeg">JPEG</option>
+            <option value="image/webp">WebP</option>
+            <option value="image/png">PNG</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-grade">
+      <div class="grade-grid">
+        <div class="grade-preset-row">
+          <button class="preset-btn active" data-preset="none" onclick="applyPreset(this)">None</button>
+          <button class="preset-btn" data-preset="vivid" onclick="applyPreset(this)">Vivid</button>
+          <button class="preset-btn" data-preset="matte" onclick="applyPreset(this)">Matte</button>
+          <button class="preset-btn" data-preset="warm" onclick="applyPreset(this)">Warm</button>
+          <button class="preset-btn" data-preset="cool" onclick="applyPreset(this)">Cool</button>
+          <button class="preset-btn" data-preset="bw" onclick="applyPreset(this)">B&amp;W</button>
+          <button class="preset-btn" data-preset="fade" onclick="applyPreset(this)">Fade</button>
+          <button class="preset-btn" data-preset="cinema" onclick="applyPreset(this)">Cinema</button>
+          <button class="reset-grade" onclick="resetGrade()">Reset</button>
+        </div>
+        <div class="ctrl-group">
+          <label>Brightness</label>
+          <input type="range" id="g-brightness" min="0.5" max="1.8" step="0.01" value="1">
+          <span id="gv-brightness">1.0</span>
+        </div>
+        <div class="ctrl-group">
+          <label>Contrast</label>
+          <input type="range" id="g-contrast" min="0.5" max="2" step="0.01" value="1">
+          <span id="gv-contrast">1.0</span>
+        </div>
+        <div class="ctrl-group">
+          <label>Saturation</label>
+          <input type="range" id="g-saturate" min="0" max="3" step="0.01" value="1">
+          <span id="gv-saturate">1.0</span>
+        </div>
+        <div class="ctrl-group">
+          <label>Warmth</label>
+          <input type="range" id="g-warm" min="-40" max="40" step="1" value="0">
+          <span id="gv-warm">0</span>
+        </div>
+        <div class="ctrl-group">
+          <label>Sharpen</label>
+          <input type="range" id="g-sharpen" min="0" max="2" step="0.1" value="0">
+          <span id="gv-sharpen">0</span>
+        </div>
+        <div class="ctrl-group">
+          <label>Vignette</label>
+          <input type="range" id="g-vignette" min="0" max="1" step="0.05" value="0">
+          <span id="gv-vignette">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-bar">
+      <div class="sum-card"><div class="sum-label">Images</div><div class="sum-val" id="s-count">0</div></div>
+      <div class="sum-card"><div class="sum-label">Original</div><div class="sum-val" id="s-orig">—</div></div>
+      <div class="sum-card"><div class="sum-label">Compressed</div><div class="sum-val" id="s-comp">—</div></div>
+      <div class="sum-card"><div class="sum-label">Savings</div><div class="sum-val green" id="s-save">—</div></div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="action-row">
+      <button id="add-more-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add more
+      </button>
+      <button class="primary" id="dl-all-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download all
+      </button>
+      <button id="clear-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        Clear all
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MAX = 150;
+let items = [];
+
+const presets = {
+  none:    {brightness:1,   contrast:1,   saturate:1,   warm:0,  sharpen:0, vignette:0},
+  vivid:   {brightness:1.05,contrast:1.2, saturate:1.6, warm:5,  sharpen:0.5,vignette:0.15},
+  matte:   {brightness:1.08,contrast:0.85,saturate:0.7, warm:8,  sharpen:0, vignette:0.25},
+  warm:    {brightness:1.05,contrast:1.05,saturate:1.1, warm:28, sharpen:0, vignette:0.1},
+  cool:    {brightness:1.0, contrast:1.05,saturate:0.95,warm:-28,sharpen:0, vignette:0.1},
+  bw:      {brightness:1.0, contrast:1.2, saturate:0,   warm:0,  sharpen:0.3,vignette:0.3},
+  fade:    {brightness:1.12,contrast:0.78,saturate:0.65,warm:10, sharpen:0, vignette:0},
+  cinema:  {brightness:0.95,contrast:1.15,saturate:0.85,warm:-5, sharpen:0.2,vignette:0.4},
+};
+
+function getGrade(){
+  return {
+    brightness: parseFloat(document.getElementById('g-brightness').value),
+    contrast:   parseFloat(document.getElementById('g-contrast').value),
+    saturate:   parseFloat(document.getElementById('g-saturate').value),
+    warm:       parseFloat(document.getElementById('g-warm').value),
+    sharpen:    parseFloat(document.getElementById('g-sharpen').value),
+    vignette:   parseFloat(document.getElementById('g-vignette').value),
+  };
+}
+
+function setGradeUI(g){
+  ['brightness','contrast','saturate','warm','sharpen','vignette'].forEach(k=>{
+    document.getElementById('g-'+k).value = g[k];
+    document.getElementById('gv-'+k).textContent = parseFloat(g[k]).toFixed(k==='warm'?0:1);
+  });
+}
+
+function applyPreset(btn){
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  setGradeUI(presets[btn.dataset.preset]);
+  compressAll();
+}
+
+function resetGrade(){
+  setGradeUI(presets.none);
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('[data-preset="none"]').classList.add('active');
+  compressAll();
+}
+
+['brightness','contrast','saturate','warm','sharpen','vignette'].forEach(k=>{
+  document.getElementById('g-'+k).addEventListener('input',function(){
+    document.getElementById('gv-'+k).textContent = parseFloat(this.value).toFixed(k==='warm'?0:1);
+    document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+    compressAll();
+  });
+});
+
+function applyGradeToCanvas(canvas, g){
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const idata = ctx.getImageData(0, 0, w, h);
+  const d = idata.data;
+
+  const br = g.brightness;
+  const ct = g.contrast;
+  const sa = g.saturate;
+  const wm = g.warm / 255;
+
+  for(let i=0;i<d.length;i+=4){
+    let r=d[i]/255, gr=d[i+1]/255, b=d[i+2]/255;
+    // brightness
+    r*=br; gr*=br; b*=br;
+    // contrast
+    r=(r-0.5)*ct+0.5; gr=(gr-0.5)*ct+0.5; b=(b-0.5)*ct+0.5;
+    // warmth (shift red/blue channels)
+    r+=wm; b-=wm;
+    // saturation via luminance
+    const lum=0.2126*r+0.7152*gr+0.0722*b;
+    r=lum+(r-lum)*sa; gr=lum+(gr-lum)*sa; b=lum+(b-lum)*sa;
+    d[i]  =Math.min(255,Math.max(0,r*255));
+    d[i+1]=Math.min(255,Math.max(0,gr*255));
+    d[i+2]=Math.min(255,Math.max(0,b*255));
+  }
+  ctx.putImageData(idata,0,0);
+
+  // sharpen via convolution
+  if(g.sharpen > 0){
+    const s = g.sharpen;
+    const k=[0,-s,0,-s,1+4*s,-s,0,-s,0];
+    const src=ctx.getImageData(0,0,w,h);
+    const dst=ctx.createImageData(w,h);
+    const sd=src.data; const dd=dst.data;
+    for(let y=1;y<h-1;y++){
+      for(let x=1;x<w-1;x++){
+        const idx=(y*w+x)*4;
+        for(let c=0;c<3;c++){
+          let v=0;
+          for(let ky=-1;ky<=1;ky++) for(let kx=-1;kx<=1;kx++)
+            v+=sd[((y+ky)*w+(x+kx))*4+c]*k[(ky+1)*3+(kx+1)];
+          dd[idx+c]=Math.min(255,Math.max(0,v));
+        }
+        dd[idx+3]=sd[idx+3];
+      }
+    }
+    ctx.putImageData(dst,0,0);
+  }
+
+  // vignette
+  if(g.vignette > 0){
+    const radX=w/2, radY=h/2;
+    const vg=ctx.createRadialGradient(w/2,h/2,Math.min(radX,radY)*0.3,w/2,h/2,Math.max(radX,radY)*1.1);
+    vg.addColorStop(0,'rgba(0,0,0,0)');
+    vg.addColorStop(1,'rgba(0,0,0,'+g.vignette+')');
+    ctx.fillStyle=vg; ctx.fillRect(0,0,w,h);
+  }
+}
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const main = document.getElementById('main');
+const grid = document.getElementById('grid');
+const maxwSlider = document.getElementById('maxw');
+const fmtSelect = document.getElementById('fmt');
+
+function fmtBytes(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(2)+' MB';}
+
+function updateSummary(){
+  const done=items.filter(i=>i.blob);
+  document.getElementById('s-count').textContent=items.length;
+  document.getElementById('s-orig').textContent=fmtBytes(items.reduce((a,i)=>a+i.file.size,0));
+  if(done.length===items.length&&items.length>0){
+    const ct=done.reduce((a,i)=>a+i.blob.size,0);
+    const ot=items.reduce((a,i)=>a+i.file.size,0);
+    document.getElementById('s-comp').textContent=fmtBytes(ct);
+    const p=Math.round((1-ct/ot)*100);
+    document.getElementById('s-save').textContent=p>0?p+'% smaller':'—';
+  }
+}
+
+function compress(item){
+  item.blob=null;
+  const card=document.getElementById('card-'+item.id);
+  if(card){const b=card.querySelector('.status-badge');if(b){b.className='status-badge processing';b.textContent='processing';}}
+  const targetBytes=parseInt(document.getElementById('targetkb').value)*1024;
+  const maxW=parseInt(maxwSlider.value);
+  const fmt=fmtSelect.value;
+  const grade=getGrade();
+  const img=new Image();
+  img.onload=()=>{
+    let w=img.width,h=img.height;
+    if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+    const canvas=document.createElement('canvas');
+    canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
+    applyGradeToCanvas(canvas,grade);
+    if(fmt==='image/png'){canvas.toBlob(blob=>finalize(item,blob,canvas),fmt);return;}
+    let lo=0.05,hi=1.0,best=null,attempts=0;
+    function tryQ(q){
+      canvas.toBlob(blob=>{
+        attempts++;
+        if(!best||Math.abs(blob.size-targetBytes)<Math.abs(best.size-targetBytes))best=blob;
+        if(attempts>12||hi-lo<0.02){finalize(item,best,canvas);return;}
+        if(blob.size>targetBytes)hi=q;else lo=q;
+        tryQ((lo+hi)/2);
+      },fmt,q);
+    }
+    tryQ(0.75);
+  };
+  img.src=item.origUrl;
+}
+
+function finalize(item,blob,canvas){
+  item.blob=blob;
+  item.compUrl=URL.createObjectURL(blob);
+  item.thumbUrl=canvas.toDataURL('image/jpeg',0.5);
+  const c=document.getElementById('card-'+item.id);
+  if(c){
+    c.querySelector('img').src=item.thumbUrl;
+    c.querySelector('.thumb-size').textContent=fmtBytes(blob.size);
+    const pct=Math.round((1-blob.size/item.file.size)*100);
+    const sv=c.querySelector('.thumb-saving');
+    sv.textContent=pct>0?'-'+pct+'%':(pct<0?'+'+Math.abs(pct)+'%':'');
+    sv.className='thumb-saving'+(pct<0?' bigger':'');
+    const b=c.querySelector('.status-badge');
+    b.className='status-badge done-badge';b.textContent='ready';
+    const pb=c.querySelector('.progress-bar');if(pb)pb.remove();
+  }
+  updateSummary();
+}
+
+function compressAll(){items.forEach(compress);}
+
+function renderCard(item){
+  const div=document.createElement('div');
+  div.className='thumb-card';div.id='card-'+item.id;
+  div.innerHTML=`
+    <button class="remove-btn" title="Remove" onclick="removeItem('${item.id}')">&#x2715;</button>
+    <div class="thumb-overlay"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> preview</div>
+    <img src="${item.origUrl}" alt="${item.file.name}">
+    <div class="thumb-name">${item.file.name}</div>
+    <div class="thumb-meta"><span class="thumb-size">${fmtBytes(item.file.size)}</span><span class="thumb-saving"></span></div>
+    <div><span class="status-badge processing">processing</span></div>
+    <div class="progress-bar"><div class="progress-fill"></div></div>
+  `;
+  grid.appendChild(div);
+  // click to preview
+  div.querySelector('img').addEventListener('click',()=>{
+    if(item.compUrl){window.open(item.compUrl);}
+  });
+}
+
+window.removeItem=function(id){
+  items=items.filter(i=>i.id!==id);
+  const el=document.getElementById('card-'+id);
+  if(el){el.style.animation='cardOut 0.2s ease both';setTimeout(()=>el.remove(),200);}
+  if(items.length===0){main.style.display='none';dropZone.style.display='block';}
+  updateSummary();
+};
+
+function addFiles(files){
+  const slots=MAX-items.length;
+  if(slots<=0){showToast('Maximum 150 images reached.');return;}
+  const toAdd=Array.from(files).filter(f=>f.type.startsWith('image/')).slice(0,slots);
+  toAdd.forEach(file=>{
+    const id=Date.now()+'-'+Math.random().toString(36).slice(2);
+    const origUrl=URL.createObjectURL(file);
+    const item={id,file,origUrl,blob:null,compUrl:null,thumbUrl:null};
+    items.push(item);
+    renderCard(item);
+    compress(item);
+  });
+  if(items.length>0){main.style.display='block';dropZone.style.display='none';}
+  updateSummary();
+}
+
+function showToast(msg){
+  const t=document.createElement('div');
+  t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.3s';setTimeout(()=>t.remove(),300);},2500);
+}
+
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+fileInput.addEventListener('change',e=>{addFiles(e.target.files);fileInput.value='';});
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag-over');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('drag-over');addFiles(e.dataTransfer.files);});
+
+document.getElementById('targetkb').addEventListener('input',function(){document.getElementById('kb-val').textContent=this.value+' KB';compressAll();});
+maxwSlider.addEventListener('input',function(){document.getElementById('w-val').textContent=this.value+'px';compressAll();});
+fmtSelect.addEventListener('change',compressAll);
+
+document.getElementById('add-more-btn').addEventListener('click',()=>{
+  if(items.length>=MAX){showToast('Maximum 150 images reached.');return;}
+  fileInput.click();
+});
+
+document.getElementById('dl-all-btn').addEventListener('click',()=>{
+  const done=items.filter(i=>i.blob);
+  if(!done.length){showToast('Nothing ready to download yet.');return;}
+  const ext=fmtSelect.value.split('/')[1];
+  done.forEach(item=>{
+    const name=item.file.name.replace(/\.[^.]+$/,'')+'_compressed.'+ext;
+    const a=document.createElement('a');a.href=item.compUrl;a.download=name;a.click();
+  });
+  showToast('Downloading '+done.length+' image'+(done.length>1?'s':'')+'...');
+});
+
+document.getElementById('clear-btn').addEventListener('click',()=>{
+  items=[];grid.innerHTML='';
+  main.style.display='none';dropZone.style.display='block';
+  updateSummary();
+});
+
+// cardOut animation
+const st=document.createElement('style');
+st.textContent='@keyframes cardOut{to{opacity:0;transform:scale(0.88);}}';
+document.head.appendChild(st);
+</script>
+</body>
+</html>
